@@ -16,7 +16,15 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-    
+
+    - name: Set up Ninja-build
+      run: |
+        # Download and extract Ninja
+        Invoke-WebRequest -Uri https://github.com/ninja-build/ninja/releases/download/v1.10.2/ninja-win.zip -OutFile ninja.zip
+        Expand-Archive ninja.zip -DestinationPath .
+        # Add Ninja directory to PATH
+        $env:PATH += ";$(pwd)"
+        
     - name:  Configure CMake
       run: cmake --preset x64-release
 
@@ -30,7 +38,8 @@ jobs:
       fail-fast: false
     steps:
     - uses: actions/checkout@v3
-    
+    - name: Set up Ninja-build
+      run: sudo apt-get install ninja-build
     - name:  Configure CMake
       run: cmake --preset linux-release
       
