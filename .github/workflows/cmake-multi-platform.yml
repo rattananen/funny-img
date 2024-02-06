@@ -17,15 +17,12 @@ jobs:
     - name: check out
       uses: actions/checkout@v4
     - name: Set up Ninja-build
-      run: |
-        # Download and extract Ninja
-        Invoke-WebRequest -Uri https://github.com/ninja-build/ninja/releases/download/v1.10.2/ninja-win.zip -OutFile ninja.zip
-        Expand-Archive ninja.zip -DestinationPath .
-        # Add Ninja directory to PATH
-        $env:PATH += ";$(pwd)"
+      uses: ninja-build/ninja@v1.10.0
     - name:  Configure CMake
+      working-directory: ${{ github.workspace }}
       run: cmake --preset x64-release
     - name:  Build
+      working-directory: ${{ github.workspace }}
       run: cmake --build --preset x64-release
 
   build-linux:
@@ -37,9 +34,11 @@ jobs:
     - name: check out
       uses: actions/checkout@v4
     - name: Set up Ninja-build
-      run: sudo apt-get install ninja-build
+      uses: ninja-build/ninja@v1.10.0
     - name:  Configure CMake
+      working-directory: ${{ github.workspace }}
       run: cmake --preset linux-release
     - name:  Build
+      working-directory: ${{ github.workspace }}
       run: cmake --build --preset linux-release
   
