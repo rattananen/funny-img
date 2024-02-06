@@ -13,10 +13,9 @@ jobs:
     strategy:
       # Set fail-fast to false to ensure that feedback is delivered for all matrix combinations. Consider changing this to true when your workflow is stable.
       fail-fast: false
-
     steps:
-    - uses: actions/checkout@v3
-
+    - name: check out
+      uses: actions/checkout@v4
     - name: Set up Ninja-build
       run: |
         # Download and extract Ninja
@@ -24,10 +23,8 @@ jobs:
         Expand-Archive ninja.zip -DestinationPath .
         # Add Ninja directory to PATH
         $env:PATH += ";$(pwd)"
-        
     - name:  Configure CMake
       run: cmake --preset x64-release
-
     - name:  Build
       run: cmake --build --preset x64-release
 
@@ -37,12 +34,12 @@ jobs:
     strategy:
       fail-fast: false
     steps:
-    - uses: actions/checkout@v3
+    - name: check out
+      uses: actions/checkout@v4
     - name: Set up Ninja-build
       run: sudo apt-get install ninja-build
     - name:  Configure CMake
       run: cmake --preset linux-release
-      
     - name:  Build
       run: cmake --build --preset linux-release
   
