@@ -1,6 +1,7 @@
 #pragma once
 
 #include "pixel.hpp"
+#include "bmp_error.hpp"
 #include <iostream>
 #include <vector>
 #include <format>
@@ -17,23 +18,25 @@ namespace img::bmp {
 			.read(reinterpret_cast<char*>(&pixel.r), 1);
 	}
 
+	enum struct BitDepth :uint16_t {
+		bit1 = 1, bit4 = 4, bit8 = 8,
+		bit16 = 16, bit24 = 24, bit32 = 32
+	};
+	enum struct CompressMethod :uint32_t {
+		BI_RGB = 0,
+		BI_RLE8 = 1,
+		BI_RLE4 = 2,
+		BI_BITFIELDS = 3,
+		BI_JPEG = 4,
+		BI_PNG = 5,
+		BI_ALPHABITFIELDS = 6,
+		BI_CMYK = 11,
+		BI_CMYKRLE8 = 12,
+		BI_CMYKRLE4 = 13
+	};
+
 	struct Bmp {
-		enum struct BitDepth :uint16_t {
-			bit1 = 1, bit4 = 4, bit8 = 8,
-			bit16 = 16, bit24 = 24, bit32 = 32
-		};
-		enum struct CompressMethod :uint32_t {
-			BI_RGB = 0,
-			BI_RLE8 = 1,
-			BI_RLE4 = 2,
-			BI_BITFIELDS = 3,
-			BI_JPEG = 4,
-			BI_PNG = 5,
-			BI_ALPHABITFIELDS = 6,
-			BI_CMYK = 11,
-			BI_CMYKRLE8 = 12,
-			BI_CMYKRLE4 = 13
-		};
+		
 		struct Header {
 			char signature[2];
 			uint32_t img_size;
@@ -116,7 +119,7 @@ namespace img::bmp {
 	}
 
 	template <typename PX = Rgb24, size_t PX_SIZE = 3>
-	struct BmpRowIt {
+	struct BmpRowView {
 		using pixel_type = PX;
 		using row_type = std::vector<pixel_type>;
 
@@ -129,7 +132,7 @@ namespace img::bmp {
 			using reference = const row_type&;
 			using self_type = iterator;
 
-			iterator(pointer _ptr, BmpRowIt& _it) : ptr{ _ptr }, it{ _it } {}
+			iterator(pointer _ptr, BmpRowView& _view) : ptr{ _ptr }, view{ _view } {}
 
 			self_type& operator++()
 			{
@@ -144,14 +147,14 @@ namespace img::bmp {
 			}
 			bool operator==(self_type other) const { return ptr == other.ptr; }
 			bool operator!=(self_type other) const { return !(*this == other); }
-			reference operator*() const { return it(ptr); }
+			reference operator*() const { return view(ptr); }
 
 		private:
 			pointer ptr;
-			BmpRowIt& it;
+			BmpRowView& view;
 		};
 
-		BmpRowIt(std::istream& _is, const Bmp& bmp) :
+		BmpRowView(std::istream& _is, const Bmp& bmp) :
 			is{ _is },
 			offset{ bmp.header.offset },
 			w{ static_cast<uint32_t>(std::abs(bmp.dib.width)) },
@@ -192,7 +195,7 @@ namespace img::bmp {
 	std::istream& operator>>(std::istream& is, Bmp::Header& head)
 	{
 		return is
-			.read(&head.signature[0], 2)
+			.read(head.signature, 2)
 			.read(reinterpret_cast<char*>(&head.img_size), 4)
 			.read(reinterpret_cast<char*>(&head.reserved1), 2)
 			.read(reinterpret_cast<char*>(&head.reserved1), 2)
@@ -218,67 +221,63 @@ namespace img::bmp {
 
 
 	struct BmpReader {
-		BmpReader(std::istream& input_stream, std::ostream& error_stream) :m_is{ input_stream }, m_fos{ error_stream }
+		BmpReader(std::istream& input_stream) :m_is{ input_stream }
 		{}
 
-
-		void fail(const std::string& msg) {
-			m_fos << msg << '\n';
-		}
-
-		bool read_meta(Bmp& bmp)
+		std::error_code read_meta(Bmp& bmp)
 		{
 			m_is.seekg(0);
 			m_is >> bmp.header;
+
+			std::error_code ec;
 			if (bmp.signature() != "BM") {
-				fail("unknow signature");
+				ec = BmpError::unknow_signature;
 				goto fail_return;
 			}
 			m_is >> bmp.dib;
 			if (bmp.dib.size != 40) {
-				fail("not support DIB");
+				ec = BmpError::dib_not_support;
 				goto fail_return;
 			}
 
-			if (bmp.dib.bitdepth != Bmp::BitDepth::bit24) {
-				fail("not support bitdepth");
+			if (bmp.dib.bitdepth != BitDepth::bit24) {
+				ec = BmpError::bitdepth_not_support;
 				goto fail_return;
 			}
 
-			if (bmp.dib.compress_method != Bmp::CompressMethod::BI_RGB) {
-				fail("not support compression method");
+			if (bmp.dib.compress_method != CompressMethod::BI_RGB) {
+				ec = BmpError::compression_method_not_support;
 				goto fail_return;
 			}
 
-			return true;
+			return ec;
 
 		fail_return:
 			m_is.setstate(std::ios::badbit);
-			return false;
+			return ec;
 		}
 
 		std::istream& m_is;
-		std::ostream& m_fos;
 	};
 
 
 	struct BmpFileReader {
-		BmpFileReader(const std::string& _path) :path{ _path }, ifs{ _path ,  std::ios::binary }, reader{ ifs , std::cerr }, bmp{} {};
+		BmpFileReader(const std::string& _path) :path{ _path }, ifs{ _path ,  std::ios::binary }, reader{ ifs}, bmp{} {};
 
 		
 		void info_to(std::ostream& os) const {
 			os << str_info(bmp.header) << str_info(bmp.dib);
 		}
 
-		bool fetch_meta() {
+		std::error_code fetch_meta() {
 			if (!ifs.is_open()) {
-				return false;
+				return BmpError::fail_open_file;
 			}
 			return reader.read_meta(bmp);
 		}
 
-		auto iter() {
-			return BmpRowIt{ ifs , bmp };
+		auto view() {
+			return BmpRowView{ ifs , bmp };
 		}
 
 		

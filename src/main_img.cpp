@@ -8,17 +8,17 @@ char to_char(img::Rgb24 c, const char* table, size_t len) {
 	return table[static_cast<size_t>(img::luminance(c) * len) % len];
 }
 
-/// @return signal for main()
-int cmd_convert(const std::string& in, std::ostream& os, const char* table = "ABC") {
+/// @return error code
+int cmd_convert(const std::string& in, std::ostream& os, const char* table = "ABCDEFG") {
 	using namespace img::bmp;
 	BmpFileReader freader{in};
-	if (!freader.fetch_meta()) {
-		std::cerr << std::format("invalid file: {}\n", in);
+	if (auto ec = freader.fetch_meta()) {
+		std::cerr << std::format("[{}:{}] {}\n", ec.category().name(), ec.value(),ec.message());
 		return 1;
 	}
 	
 	auto len = std::char_traits<char>::length(table);
-	for (auto& row : freader.iter()) {
+	for (auto& row : freader.view()) {
 		for (auto p : row) {
 			os << to_char(p, table, len);
 		}
@@ -29,7 +29,7 @@ int cmd_convert(const std::string& in, std::ostream& os, const char* table = "AB
 
 constexpr auto help_text =
 "usage:\n"
-" funny_img <input image path> [char table (default=ABC)]\n";
+" funny_img <input image path> [char table (default=ABCDEFG)]\n";
 
 int main(int argc, const char** argv)
 {
