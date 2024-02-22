@@ -11,7 +11,7 @@ file(GLOB img_inc_files
     "src/img/bmp_error.hpp" 
     "src/img/png.hpp"
     "src/img/png_error.hpp"
-    "src/img/inflate2.hpp" 
+    "src/img/deflate.hpp" 
   )
 
 add_executable (funny_img "src/main_img.cpp" ${img_inc_files})
@@ -20,7 +20,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release")
     target_link_options(funny_img PRIVATE -static)
 endif()
 
-add_executable (funny_img_test "src/main_img_test.cpp" ${img_inc_files}  "src/img/inflate.cpp")
+add_executable (funny_img_test "src/main_img_test.cpp" ${img_inc_files}  )
 
 
 set(resource_dir "${CMAKE_SOURCE_DIR}/resource/")

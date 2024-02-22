@@ -1,7 +1,6 @@
 #pragma once
 
-#include "inflate.hpp"
-#include "inflate2.hpp"
+#include "deflate.hpp"
 #include "png_error.hpp"
 #include <inttypes.h>
 #include <iostream>
@@ -90,8 +89,8 @@ namespace img::png {
 			.read(reinterpret_cast<char*>(&ihdr.filter_method), 1)
 			.read(reinterpret_cast<char*>(&ihdr.interlace), 1);
 	}
-
 	struct PngReader {
+		
 		PngReader(std::istream& in) :m_is{ in }
 		{}
 
@@ -143,43 +142,30 @@ namespace img::png {
 			if (!goto_chunk(ChunkId::IDAT)) {
 				return PngError::invalid_idat;
 			}
-			DeflateDecompress de{ m_is };
+			deflate::Inflater::window_t bytes;
+			bytes.reserve(png.ihdr.height * png.ihdr.width * 32 + png.ihdr.height);
 
-			auto ec = de.decompress();
+			deflate::Inflater decompressor{m_is, bytes };
+
+			deflate::Header header;
+
+			decompressor.consume_head(header);
+
+			if (header.CF != 8 || header.CINFO != 7 || header.FDICT != 0) {
+				return PngError::deflate_decompress_fail;
+			}
+
+			auto ec = decompressor.decompress();
+
 			if (ec) {
-				std::cout << "decompress fail\n";
+				return PngError::deflate_decompress_fail;
 			}
-			else {
-				std::cout << "decompress ok\n";
-			
-			}
-			//std::cout << std::format("c_size={}\n", last_size);
-			//std::string buf{};
-			//buf.reserve(last_size);
-
-			//m_is.read(&buf[0], last_size);
-
-			//DeflateDecompressor de{};
-			//std::vector<char> bytes;
-			
-			//auto err = de.decompress(buf.c_str(), last_size, bytes);
-
-			//std::cout << std::format("u_size={}\n", bytes.size());
-			//std::cout << std::format("err={}\n", err);
-			//
-			//auto row_size = png.ihdr.width * 4 + 1;
-			//auto a = 0;
-			//for (auto j = 0;j < png.ihdr.height;++j) {
-			//	auto it = bytes.begin() + row_size * j;
-			//	std::cout << std::format("#{} f={:x}\n",  j, *it);
-			//}
-
+		
+			std::cout << "error=" << ec << '\n';
+			std::cout << "bytes size=" << bytes.size() << '\n';
+	
 			return {};
 		}
-
-		
-
-		
 
 		bool goto_chunk(ChunkId id) {
 			while (m_is.good()) {

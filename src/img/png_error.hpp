@@ -6,13 +6,15 @@ namespace img::png
 {
     enum struct PngError
     {
+        general_error = 1,
         invalid_signature = 10,
         invalid_ihdr,
         bitdepth_not_support,
         color_type_not_support,
         interlace_not_support,
         invalid_idat,
-        fail_open_file
+        fail_open_file,
+        deflate_decompress_fail
     };
 
     struct PngCategory : std::error_category
@@ -25,6 +27,8 @@ namespace img::png
         {
             switch (static_cast<PngError>(value))
             {
+            case PngError::general_error:
+                return "general error";
             case PngError::invalid_signature:
                 return "invalid signature";
             case PngError::invalid_ihdr:
@@ -39,6 +43,8 @@ namespace img::png
                 return "no valid IDAT";
             case PngError::fail_open_file:
                 return "can't open file";
+            case PngError::deflate_decompress_fail:
+                return "deflate decompress fail";
             default:
                 return "unknown error";
             }
