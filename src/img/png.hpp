@@ -45,6 +45,14 @@ namespace img::png {
 		truecolor_a = 6,
 	};
 
+	enum struct FilterType :uint8_t {
+		None = 0,
+		Sub ,
+		Up ,
+		Average ,
+		Paeth,
+	};
+
 	struct Png {
 		
 		struct IHDR {
@@ -142,14 +150,14 @@ namespace img::png {
 			if (!goto_chunk(ChunkId::IDAT)) {
 				return PngError::invalid_idat;
 			}
-			deflate::Inflater::window_t bytes;
-			bytes.reserve(png.ihdr.height * png.ihdr.width * 32 + png.ihdr.height);
 
-			deflate::Inflater decompressor{m_is, bytes };
 
-			deflate::Header header;
+			size_t expected_size = (png.ihdr.height * png.ihdr.width * 4) + png.ihdr.height;//pixel bytes + filter type bytes
+			//bytes.reserve(expected_size);
 
-			decompressor.consume_head(header);
+			deflate::Inflater decompressor{m_is };
+
+			auto header  = decompressor.read_head();
 
 			if (header.CF != 8 || header.CINFO != 7 || header.FDICT != 0) {
 				return PngError::deflate_decompress_fail;
@@ -158,11 +166,12 @@ namespace img::png {
 			auto ec = decompressor.decompress();
 
 			if (ec) {
+				std::cout << "error=" << ec << '\n';
 				return PngError::deflate_decompress_fail;
 			}
 		
-			std::cout << "error=" << ec << '\n';
-			std::cout << "bytes size=" << bytes.size() << '\n';
+			
+			//std::cout << "bytes size=" << bytes.size() << '\n';
 	
 			return {};
 		}

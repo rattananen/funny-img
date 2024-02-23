@@ -12,6 +12,7 @@ file(GLOB img_inc_files
     "src/img/png.hpp"
     "src/img/png_error.hpp"
     "src/img/deflate.hpp" 
+    "src/img/generator.hpp" 
   )
 
 add_executable (funny_img "src/main_img.cpp" ${img_inc_files})

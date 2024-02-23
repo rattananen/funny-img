@@ -35,30 +35,32 @@ namespace img::bmp {
 		BI_CMYKRLE4 = 13
 	};
 
+	struct Header {
+		char signature[2];
+		uint32_t img_size;
+		uint16_t reserved1;
+		uint16_t reserved2;
+		uint32_t offset;
+	};
+
+	/// Windows BITMAPINFOHEADER
+	struct DIB {
+		uint32_t size;
+		int32_t width;
+		int32_t height;
+		uint16_t colorplane_num;
+		BitDepth bitdepth;
+		CompressMethod compress_method;
+		uint32_t raw_img_size;
+		int32_t horizontal_ppm;
+		int32_t vertical_ppm;
+		uint32_t color_num;
+		uint32_t important_color_num;
+	};
+
 	struct Bmp {
 		
-		struct Header {
-			char signature[2];
-			uint32_t img_size;
-			uint16_t reserved1;
-			uint16_t reserved2;
-			uint32_t offset;
-		};
-
-		/// Windows BITMAPINFOHEADER
-		struct DIB {
-			uint32_t size;
-			int32_t width;
-			int32_t height;
-			uint16_t colorplane_num;
-			BitDepth bitdepth;
-			CompressMethod compress_method;
-			uint32_t raw_img_size;
-			int32_t horizontal_ppm;
-			int32_t vertical_ppm;
-			uint32_t color_num;
-			uint32_t important_color_num;
-		};
+		
 
 		std::string_view signature() const
 		{
@@ -79,7 +81,7 @@ namespace img::bmp {
 		DIB dib;
 	};
 
-	std::string str_info(const Bmp::Header& head)
+	std::string str_info(const Header& head)
 	{
 		return std::format(
 			"signature={}\n"
@@ -90,7 +92,7 @@ namespace img::bmp {
 			head.offset);
 	}
 
-	std::string str_info(const Bmp::DIB& dib)
+	std::string str_info(const DIB& dib)
 	{
 		return std::format(
 			"size={}\n"
@@ -125,6 +127,7 @@ namespace img::bmp {
 
 		struct iterator
 		{
+			using view_type = BmpRowView<PX, PX_SIZE>;
 			using iterator_category = std::input_iterator_tag;
 			using value_type = row_type;
 			using difference_type = int64_t;
@@ -132,7 +135,7 @@ namespace img::bmp {
 			using reference = const row_type&;
 			using self_type = iterator;
 
-			iterator(pointer _ptr, BmpRowView& _view) : ptr{ _ptr }, view{ _view } {}
+			iterator(pointer _ptr, view_type& _view) : ptr{ _ptr }, view{ _view } {}
 
 			self_type& operator++()
 			{
@@ -151,7 +154,7 @@ namespace img::bmp {
 
 		private:
 			pointer ptr;
-			BmpRowView& view;
+			view_type& view;
 		};
 
 		BmpRowView(std::istream& _is, const Bmp& bmp) :
@@ -192,7 +195,7 @@ namespace img::bmp {
 		const uint32_t row_size;
 	};
 
-	std::istream& operator>>(std::istream& is, Bmp::Header& head)
+	std::istream& operator>>(std::istream& is, Header& head)
 	{
 		return is
 			.read(head.signature, 2)
@@ -202,7 +205,7 @@ namespace img::bmp {
 			.read(reinterpret_cast<char*>(&head.offset), 4);
 	}
 
-	std::istream& operator>>(std::istream& is, Bmp::DIB& dib)
+	std::istream& operator>>(std::istream& is, DIB& dib)
 	{
 		return is
 			.read(reinterpret_cast<char*>(&dib.size), 4)
