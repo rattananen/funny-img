@@ -150,7 +150,7 @@ namespace img::bmp {
 			}
 			bool operator==(self_type other) const { return ptr == other.ptr; }
 			bool operator!=(self_type other) const { return !(*this == other); }
-			reference operator*() const { return view(ptr); }
+			reference operator*() const { return view[ptr]; }
 
 		private:
 			pointer ptr;
@@ -169,7 +169,7 @@ namespace img::bmp {
 			row_buf.reserve(w);
 		}
 
-		row_type& operator()(int64_t ro)
+		row_type& operator[](int64_t ro)
 		{
 			is.seekg(offset + row_size * (ro - 1), std::ios::beg);
 			row_buf.clear();

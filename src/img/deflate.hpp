@@ -1,11 +1,11 @@
 #pragma once
 
-#include "generator.hpp"
 #include <iostream>
 #include <vector>
 #include <memory>
+#include <cmath>
 
-// most code come from https://github.com/madler/zlib/blob/master/contrib/puff/puff.c
+/// most code come from https://github.com/madler/zlib/blob/master/contrib/puff/puff.c
 namespace img::deflate
 {
 	constexpr int MAXBITS = 15;
@@ -31,8 +31,7 @@ namespace img::deflate
 
 	constexpr uint16_t order[19] = { 16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15 };//lenght code order
 
-	constexpr size_t max_distance = 32768;
-
+	
 	enum struct BlockType :uint8_t {
 		no_compress,
 		fixed,
@@ -40,20 +39,26 @@ namespace img::deflate
 		reserved
 	};
 
-
-	template<typename T, size_t SIZE>
+	template<typename T>
 	struct CircularBuffer {
+		using container_type = std::vector<T>;
+		CircularBuffer(size_t n) :m_size{n} {
+			data.resize(m_size);
+		}
 
 		T& operator[](std::ptrdiff_t index) {
-			return data[index % SIZE];
+			return data[index % m_size];
 		}
-
-		constexpr size_t size() const {
-			return SIZE;
+		
+		size_t size() const {
+			return m_size;
 		}
 	private:
-		T data[SIZE];
+		size_t m_size;
+		container_type data;
 	};
+
+	using window_t = CircularBuffer<uint8_t>;
 
 	union Header {
 		uint16_t data;
@@ -66,6 +71,9 @@ namespace img::deflate
 		};
 	};
 
+	size_t deflate_window_size(int cifo) {
+		return 256 * std::pow(2, cifo);
+	}
 
 	struct Huffman {
 		constexpr Huffman(size_t ncnt, size_t nsym) :count(ncnt, 0), symbol(nsym, 0)
@@ -105,8 +113,8 @@ namespace img::deflate
 		std::vector<int16_t> symbol;
 	};
 
-	struct LZ77code {
-		LZ77code(size_t nlen, size_t ndist) :
+	struct Lz77code {
+		Lz77code(size_t nlen, size_t ndist) :
 			lencode{ MAXBITS + 1 , nlen }, 
 			distcode{ MAXBITS + 1 , ndist } {}
 		Huffman lencode;
@@ -135,6 +143,8 @@ namespace img::deflate
 			return -10;
 		}
 
+	
+		/// @param n must not over 32
 		uint32_t read_bits(int n) {
 			while (bit_avail < n) {
 				read_to(byte_buf); // read unformated 1 byte 
@@ -166,53 +176,6 @@ namespace img::deflate
 	};
 
 
-	int LZ77Decode(InflateStream& is, const LZ77code& lz) {
-
-		int32_t symbol;         /* decoded symbol */
-		uint32_t len;            /* length for copy */
-		uint32_t dist;      /* distance for copy */
-		CircularBuffer<uint8_t, max_distance> dict_buf;
-		size_t outcnt = 0;
-
-		do {
-			symbol = is.read_code(lz.lencode);
-			if (symbol < 0) {
-				return symbol;
-			}
-			if (symbol < 256) {
-				dict_buf[outcnt] = symbol;
-				outcnt++;
-			}
-			else if (symbol > 256) {
-				symbol -= 257;
-
-				if (symbol >= 29) { return -9; }; //invalid fixed code
-
-				len = lens[symbol] + is.read_bits(lext[symbol]);
-				symbol = is.read_code(lz.distcode);
-
-				if (symbol < 0) { return symbol; }     /* invalid symbol */
-				dist = dists[symbol] + is.read_bits(dext[symbol]);
-
-				if (dist > outcnt) {
-					return -11;
-				}
-				if (dist > dict_buf.size()) {
-					return -12;
-				}
-
-				while (len--) {
-
-					dict_buf[outcnt] = dict_buf[outcnt - dist];
-					outcnt++;
-				}
-			}
-		} while (symbol != 256);
-
-		std::cout << "usize=" << outcnt << "\n";
-		return 0;
-	}
-
 	/// read deflate header
 	Header read_head(InflateStream& is) {
 		Header head;
@@ -220,14 +183,14 @@ namespace img::deflate
 		return head;
 	}
 
-	using LZ77code_ptr = std::unique_ptr<LZ77code>;
-	using LZ77_read_result = std::pair<int, LZ77code_ptr>; // error code, table
+	using Lz77code_ptr = std::unique_ptr<Lz77code>;
+	using Lz77_read_result = std::pair<int, Lz77code_ptr>; // error code, table
 
 
 	/// dynamic huffman
-	LZ77_read_result read_LZ77(InflateStream& is) {
+	Lz77_read_result read_lz77(InflateStream& is) {
 		
-		auto lz = std::make_unique<LZ77code>(MAXLCODES, MAXDCODES);
+		auto lz = std::make_unique<Lz77code>(MAXLCODES, MAXDCODES);
 
 		int nlen = is.read_bits(5) + 257;
 		int ndist = is.read_bits(5) + 1;
@@ -301,30 +264,75 @@ namespace img::deflate
 		return { 0, std::move(lz) };
 	}
 
-	int inflate(InflateStream& is) {
-		int err = 0;
+	template<typename OUT_IT>
+		requires std::output_iterator<OUT_IT, uint8_t>
+	int decode_lz77(InflateStream& is,  OUT_IT it, const Lz77code& lz, window_t& window) {
 
+		int32_t symbol;         /* decoded symbol */
+		uint32_t len;            /* length for copy */
+		uint32_t dist;      /* distance for copy */
+		size_t outcnt = 0;
+
+		do {
+			symbol = is.read_code(lz.lencode);
+			if (symbol < 0) {
+				return symbol;
+			}
+			if (symbol < 256) {
+				window[outcnt] = symbol;
+				*it++ = window[outcnt];
+				outcnt++;
+			}
+			else if (symbol > 256) {
+				symbol -= 257;
+
+				if (symbol >= 29) { return -9; }; //invalid fixed code
+
+				len = lens[symbol] + is.read_bits(lext[symbol]);
+				symbol = is.read_code(lz.distcode);
+
+				if (symbol < 0) { return symbol; }     /* invalid symbol */
+				dist = dists[symbol] + is.read_bits(dext[symbol]);
+
+				if (dist > outcnt || dist > window.size()) {
+					return -11;
+				}
+				
+				while (len--) {
+
+					window[outcnt] = window[outcnt - dist];
+					*it++ = window[outcnt];
+					outcnt++;
+				}
+			}
+		} while (symbol != 256);
+
+		return 0;
+	}
+
+	template<typename OUT_IT>
+		requires std::output_iterator<OUT_IT, uint8_t>
+	int decode_blocks(InflateStream& is, OUT_IT it, size_t window_size) {
+		window_t window{ window_size };
 		while (is.good()) {
 			bool bfinal = is.read_bits(1);
 			BlockType btype = static_cast<BlockType>(is.read_bits(2));
 			switch (btype) {
-			case BlockType::reserved:
-				return -20;
-			case BlockType::no_compress:
-				return -20;
-			case BlockType::fixed:
-				return -20;
-			case BlockType::dynamic: {
-				auto result = read_LZ77(is);
-				if (result.first) {
-					return result.first;
+				case BlockType::reserved:
+				case BlockType::no_compress:
+				case BlockType::fixed:
+					return -20; //not support yet
+				case BlockType::dynamic: {
+					auto result = read_lz77(is);
+					if (result.first) {
+						return result.first;
+					}
+					auto ec = decode_lz77(is, it, *result.second, window);
+					if (ec) {
+						return ec;
+					}
+					break;
 				}
-				auto ec = LZ77Decode(is, *result.second);
-				if (ec) {
-					return ec;
-				}
-				break;
-			}
 			}
 			if (bfinal)
 			{
@@ -334,4 +342,21 @@ namespace img::deflate
 
 		return -20;
 	}
+
+	/// concrete fucntion
+	template<typename OUT_IT> 
+		requires std::output_iterator<OUT_IT, uint8_t>
+	int inflate(std::istream& in, OUT_IT it) {
+		InflateStream is{in};
+		auto header = read_head(is);
+
+		if (header.CF != 8
+			|| header.CINFO > 7
+			|| header.FDICT != 0) {
+			return -20;
+		}
+
+		return decode_blocks(is, it, deflate_window_size(header.CINFO));
+	}
+
 }

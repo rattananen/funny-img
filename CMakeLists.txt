@@ -11,7 +11,9 @@ file(GLOB img_inc_files
     "src/img/bmp_error.hpp" 
     "src/img/png.hpp"
     "src/img/png_error.hpp"
-    "src/img/deflate.hpp" 
+    "src/img/deflate.hpp"
+    "src/img/deflate_error.hpp"
+    "src/img/deflate_generator.hpp" 
     "src/img/generator.hpp" 
   )
 
