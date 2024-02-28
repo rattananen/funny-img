@@ -9,7 +9,7 @@ char to_char(T c, const std::string& table) {
 }
 
 void stream_error(std::ostream& err, const std::error_code& ec) {
-	err << '[' << ec.category().name() << ':' << ec.value() << ']' << ' ' << ec.message();
+	err << '[' << ec.category().name() << ':' << ec.value() << ']' << ' ' << ec.message() << '\n';
 }
 
 int cmd_convert_png(const std::string& in, std::ostream& os, std::ostream& err, const std::string& table) {
