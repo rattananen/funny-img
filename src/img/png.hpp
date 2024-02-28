@@ -339,7 +339,22 @@ namespace img::png {
 			if (!ifs.is_open()) {
 				return PngError::fail_open_file;
 			}
-			return read_meta(ifs, png);
+			auto ec = read_meta(ifs, png);
+			if (ec) {
+				return ec;
+			}
+			if (png.ihdr.bitdetph != BitDepth::bit8) {
+				return PngError::bitdepth_not_support;
+			}
+
+			if (png.ihdr.color_type != ColorType::truecolor_a) {
+				return PngError::color_type_not_support;
+			}
+
+			if (png.ihdr.interlace) {
+				return PngError::interlace_not_support;
+			}
+			return {};
 		}
 
 		Row_decoder<Rgba32_view> decoder() {
