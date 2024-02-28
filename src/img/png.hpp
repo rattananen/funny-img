@@ -5,7 +5,6 @@
 #include "pixel.hpp"
 #include <iostream>
 #include <fstream>
-#include <format>
 
 
 /// https://www.w3.org/TR/png/#13Decompression
@@ -88,24 +87,7 @@ namespace img::png {
 		}
 	};
 
-	std::string str_info(const Png::IHDR& ihdr) {
-		return std::format(
-			"width={}\n"
-			"height={}\n"
-			"bitdetph={}\n"
-			"color_type={}\n"
-			"compress_method={:d}\n"
-			"filter_method={:d}\n"
-			"interlace={}\n", 
-			ihdr.width,
-			ihdr.height,
-			static_cast<int>(ihdr.bitdetph),
-			static_cast<int>(ihdr.color_type),
-			ihdr.compress_method,
-			ihdr.filter_method,
-			ihdr.interlace);
-	}
-
+	
 	std::istream& operator>>(std::istream& is, Png::IHDR& ihdr) {
 		consume_swap_bytes(is, ihdr.width);
 		consume_swap_bytes(is, ihdr.height);
@@ -352,11 +334,6 @@ namespace img::png {
 
 	struct PngFileReader {
 		PngFileReader(const std::string& _path) :path{ _path }, ifs{ _path ,  std::ios::binary }, png{} {};
-
-
-		void info_to(std::ostream& os) const {
-			os << str_info(png.ihdr);
-		}
 
 		std::error_code fetch_meta() {
 			if (!ifs.is_open()) {

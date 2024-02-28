@@ -1,7 +1,6 @@
 ﻿#include "img/bmp.hpp"
 #include "img/png.hpp"
 
-
 /// @param table higher luminance first
 /// @param len length for table;
 template<typename T>
@@ -9,12 +8,16 @@ char to_char(T c, const std::string& table) {
 	return table[static_cast<size_t>(img::luminance(c) * table.length()) % table.length()];
 }
 
+void stream_error(std::ostream& err, const std::error_code& ec) {
+	err << '[' << ec.category().name() << ':' << ec.value() << ']' << ' ' << ec.message();
+}
+
 int cmd_convert_png(const std::string& in, std::ostream& os, std::ostream& err, const std::string& table) {
 	using namespace img::png;
 
 	PngFileReader re{in};
 	if (auto ec = re.fetch_meta()) {
-		std::cerr << std::format("[{}:{}] {}\n", ec.category().name(), ec.value(), ec.message());
+		stream_error(err, ec);
 		return 1;
 	}
 	auto decoder = re.decoder();
@@ -35,7 +38,7 @@ int cmd_convert_bmp(const std::string& in, std::ostream& os, std::ostream& err, 
 	using namespace img::bmp;
 	BmpFileReader freader{in};
 	if (auto ec = freader.fetch_meta()) {
-		err << std::format("[{}:{}] {}\n", ec.category().name(), ec.value(),ec.message());
+		stream_error(err, ec);
 		return 1;
 	}
 	

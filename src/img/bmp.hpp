@@ -4,9 +4,7 @@
 #include "bmp_error.hpp"
 #include <iostream>
 #include <vector>
-#include <format>
 #include <fstream>
-#include <format>
 
 namespace img::bmp {
 
@@ -81,45 +79,7 @@ namespace img::bmp {
 		DIB dib;
 	};
 
-	std::string str_info(const Header& head)
-	{
-		return std::format(
-			"signature={}\n"
-			"img_size={}\n"
-			"offset={}\n",
-			head.signature,
-			head.img_size,
-			head.offset);
-	}
-
-	std::string str_info(const DIB& dib)
-	{
-		return std::format(
-			"size={}\n"
-			"width={}\n"
-			"height={}\n"
-			"colorplane_num={}\n"
-			"bitdepth={}\n"
-			"compress_method={}\n"
-			"raw_img_size={}\n"
-			"horizontal_ppm={}\n"
-			"vertical_ppm={}\n"
-			"color_num={}\n"
-			"important_color_num={}\n",
-			dib.size,
-			dib.width,
-			dib.height,
-			dib.colorplane_num,
-			static_cast<uint16_t>(dib.bitdepth),
-			static_cast<uint32_t>(dib.compress_method),
-			dib.raw_img_size,
-			dib.horizontal_ppm,
-			dib.vertical_ppm,
-			dib.color_num,
-			dib.important_color_num
-		);
-	}
-
+	
 	template <typename PX = Rgb24, size_t PX_SIZE = 3>
 	struct BmpRowView {
 		using pixel_type = PX;
@@ -266,11 +226,6 @@ namespace img::bmp {
 
 	struct BmpFileReader {
 		BmpFileReader(const std::string& _path) :path{ _path }, ifs{ _path ,  std::ios::binary }, reader{ ifs}, bmp{} {};
-
-		
-		void info_to(std::ostream& os) const {
-			os << str_info(bmp.header) << str_info(bmp.dib);
-		}
 
 		std::error_code fetch_meta() {
 			if (!ifs.is_open()) {
