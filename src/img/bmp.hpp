@@ -58,8 +58,6 @@ namespace img::bmp {
 
 	struct Bmp {
 		
-		
-
 		std::string_view signature() const
 		{
 			return header.signature;
@@ -181,67 +179,48 @@ namespace img::bmp {
 			.read(reinterpret_cast<char*>(&dib.important_color_num), 4);
 	}
 
+	std::error_code read_meta(std::istream& is, Bmp& bmp)
+	{
+		is >> bmp.header;
 
-
-	struct BmpReader {
-		BmpReader(std::istream& input_stream) :m_is{ input_stream }
-		{}
-
-		std::error_code read_meta(Bmp& bmp)
-		{
-			m_is.seekg(0);
-			m_is >> bmp.header;
-
-			std::error_code ec;
-			if (bmp.signature() != "BM") {
-				ec = BmpError::unknow_signature;
-				goto fail_return;
-			}
-			m_is >> bmp.dib;
-			if (bmp.dib.size != 40) {
-				ec = BmpError::dib_not_support;
-				goto fail_return;
-			}
-
-			if (bmp.dib.bitdepth != BitDepth::bit24) {
-				ec = BmpError::bitdepth_not_support;
-				goto fail_return;
-			}
-
-			if (bmp.dib.compress_method != CompressMethod::BI_RGB) {
-				ec = BmpError::compression_method_not_support;
-				goto fail_return;
-			}
-
-			return ec;
-
-		fail_return:
-			m_is.setstate(std::ios::badbit);
-			return ec;
+		if (bmp.signature() != "BM") {
+			is.setstate(std::ios::badbit);
+			return BmpError::unknow_signature;
 		}
-
-		std::istream& m_is;
-	};
-
+		is >> bmp.dib;
+		
+		return {};
+	}
 
 	struct BmpFileReader {
-		BmpFileReader(const std::string& _path) :path{ _path }, ifs{ _path ,  std::ios::binary }, reader{ ifs}, bmp{} {};
+		BmpFileReader(const std::string& _path) :path{ _path }, ifs{ _path ,  std::ios::binary }, bmp{} {};
 
 		std::error_code fetch_meta() {
 			if (!ifs.is_open()) {
 				return BmpError::fail_open_file;
 			}
-			return reader.read_meta(bmp);
+			auto ec = read_meta(ifs, bmp);
+			if (ec) {
+				return ec;
+			}
+			if (bmp.dib.size != 40) {
+				return BmpError::dib_not_support;
+			}
+			if (bmp.dib.bitdepth != BitDepth::bit24) {
+				return BmpError::bitdepth_not_support;
+			}
+			if (bmp.dib.compress_method != CompressMethod::BI_RGB) {
+				return BmpError::compression_method_not_support;
+			}
+			return {};
 		}
 
 		auto view() {
 			return BmpRowView{ ifs , bmp };
 		}
 
-		
 		const std::string path;
 		Bmp bmp;
-		BmpReader reader;
 		std::ifstream ifs;
 
 	};

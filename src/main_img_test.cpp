@@ -1,4 +1,5 @@
 #include "img/png.hpp"
+#include <format>
 
 void info(img::Rgba32 c) {
 	std::cout << "[" 

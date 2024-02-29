@@ -75,11 +75,16 @@ int main(int argc, const char** argv)
 			<< help_text;
 		return 1;
 	}
-	if (argc == 2) {
-		return cmd_convert(argv[1], std::cout, std::cerr, std::string{"ABCDEFG"});
+	try {
+		if (argc == 2) {
+			return cmd_convert(argv[1], std::cout, std::cerr, std::string{ "ABCDEFG" });
+		}
+		if (argc == 3) {
+			return cmd_convert(argv[1], std::cout, std::cerr, argv[2]);
+		}
 	}
-	if (argc == 3) {
-		return cmd_convert(argv[1], std::cout, std::cerr, argv[2]);
+	catch (std::exception& e) {
+		std::cerr << "[error] " << e.what() << '\n';
 	}
 	return 0;
 }

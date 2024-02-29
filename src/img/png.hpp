@@ -68,27 +68,26 @@ namespace img::png {
 		}
 	}
 
+	struct IHDR {
+		uint32_t width;
+		uint32_t height;
+		BitDepth bitdetph;
+		ColorType color_type;
+		uint8_t compress_method;
+		uint8_t filter_method;
+		bool interlace;
+	};
+
 	struct Png {
 		
-		struct IHDR {
-			uint32_t width;
-			uint32_t height;
-			BitDepth bitdetph;
-			ColorType color_type;
-			uint8_t compress_method;
-			uint8_t filter_method;
-			bool interlace;
-		};
-
-		IHDR ihdr;
-
 		size_t row_size() const{
 			return num_channel(ihdr.color_type) * static_cast<int>(ihdr.bitdetph) * ihdr.width / 8;
 		}
+
+		IHDR ihdr;
 	};
 
-	
-	std::istream& operator>>(std::istream& is, Png::IHDR& ihdr) {
+	std::istream& operator>>(std::istream& is, IHDR& ihdr) {
 		consume_swap_bytes(is, ihdr.width);
 		consume_swap_bytes(is, ihdr.height);
 	
@@ -145,7 +144,6 @@ namespace img::png {
 		is.setstate(std::ios::badbit);
 		return ec;
 	}
-
 
 	using bytes_t = std::vector<uint8_t>;
 
@@ -217,7 +215,7 @@ namespace img::png {
 	struct Row_decoder {
 		using row_type = bytes_t;
 		using view_type = V;
-		using view_type_ptr = std::unique_ptr<V>;//Generator is reqire movetable object
+		using view_type_ptr = std::unique_ptr<V>;//Generator is require movetable object
 
 		Row_decoder(std::istream& is, const Png& png) :m_is{ is }, m_png{ png }, row_excl_filt_size{ png.row_size() } {
 		
@@ -225,7 +223,7 @@ namespace img::png {
 
 		Generator<view_type_ptr> operator()() {
 			if (!goto_chunk(m_is, ChunkId::IDAT)) {
-				throw std::system_error(make_error_code(PngError::invalid_idat));
+				throw std::system_error(make_error_code(PngError::idat_not_found));
 			}
 
 			deflate::Inflater_generator decomp{ m_is };
@@ -257,6 +255,8 @@ namespace img::png {
 				case FilterType::Paeth:
 					acc_size += filter_paeth(gen);
 					break;
+				default:
+					throw std::system_error(make_error_code(PngError::invalid_idat));
 				}
 				co_yield std::make_unique<view_type>(cur_row);
 				std::swap(cur_row, prev_row);
@@ -322,7 +322,6 @@ namespace img::png {
 			}
 			return prev_row[i - 1];
 		}
-		
 
 		row_type prev_row;
 		row_type cur_row;

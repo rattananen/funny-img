@@ -12,6 +12,7 @@ namespace img::png
         bitdepth_not_support,
         color_type_not_support,
         interlace_not_support,
+        idat_not_found,
         invalid_idat,
         fail_open_file,
         deflate_decompress_fail
@@ -41,6 +42,8 @@ namespace img::png
                 return "not support interlace";
             case PngError::invalid_idat:
                 return "no valid IDAT";
+            case PngError::idat_not_found:
+                return "IDAT not found";
             case PngError::fail_open_file:
                 return "can't open file";
             case PngError::deflate_decompress_fail:
