@@ -1,8 +1,8 @@
 ﻿## Features
 
-- generate ascii art from some BMP and some PNG.
-- can modify ascii output.
-- the code is cross platform (maybe).
+- Generate ascii art from some BMP and some PNG.
+- Can modify ascii output.
+- The code is cross platform (maybe).
 
 ## usage
 
@@ -23,4 +23,5 @@ funny_img test.bmp 1> output.txt
 ```bash
 funny_img test.bmp 123654987
 ```
-📙 the output character will calcurate by luminance of color. The first 
+
+📙 the output character will calcurate by luminance of color. The first character is higtest luminance and the last one is lowest.
