@@ -24,4 +24,4 @@ funny_img test.bmp 1> output.txt
 funny_img test.bmp 123654987
 ```
 
-📙 the output character will calcurate by luminance of color. The first character is higtest luminance and the last one is lowest.
+📙 The output character will be calculate by luminance of color. The first character is higtest luminance and the last one is lowest.
