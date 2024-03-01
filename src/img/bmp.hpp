@@ -8,7 +8,7 @@
 
 namespace img::bmp {
 
-	std::istream& consume_pixel(std::istream& is, Rgb24& pixel)
+	std::istream& read_rgb24(std::istream& is, Rgb24& pixel)
 	{
 		return is
 			.read(reinterpret_cast<char*>(&pixel.b), 1)
@@ -133,7 +133,7 @@ namespace img::bmp {
 			row_buf.clear();
 
 			for (uint32_t i = 0; i < w; ++i) {
-				consume_pixel(is, px_buf);
+				read_rgb24(is, px_buf);
 				row_buf.push_back(px_buf);
 			}
 

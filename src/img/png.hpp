@@ -13,7 +13,7 @@ namespace img::png {
 	/// @brief for changing endian purpose
 	template<typename T, size_t SIZE = sizeof(T), size_t MAX_IDX = SIZE - 1>
 		requires std::integral<T>
-	void consume_swap_bytes(std::istream& is, T& buf) {
+	void read_reverse(std::istream& is, T& buf) {
 		for (int i = 0; i < SIZE; ++i) {
 			is.read(&reinterpret_cast<char*>(&buf)[MAX_IDX - i], 1);
 		}
@@ -88,8 +88,8 @@ namespace img::png {
 	};
 
 	std::istream& operator>>(std::istream& is, IHDR& ihdr) {
-		consume_swap_bytes(is, ihdr.width);
-		consume_swap_bytes(is, ihdr.height);
+		read_reverse(is, ihdr.width);
+		read_reverse(is, ihdr.height);
 	
 		return is
 			.read(reinterpret_cast<char*>(&ihdr.bitdetph), 1)
@@ -105,8 +105,8 @@ namespace img::png {
 		uint32_t last_size = 0;
 		uint32_t last_id = 0;
 		while (is.good()) {
-			consume_swap_bytes(is, last_size);
-			consume_swap_bytes(is, last_id);
+			read_reverse(is, last_size);
+			read_reverse(is, last_id);
 			if (last_id == static_cast<uint32_t>(id)) {
 				return true;
 			}
@@ -121,7 +121,7 @@ namespace img::png {
 	std::error_code read_meta(std::istream& is, Png& png)
 	{
 		uint64_t signature{};
-		consume_swap_bytes(is, signature);
+		read_reverse(is, signature);
 
 		std::error_code ec;
 		if (signature != PNG_SIGNATURE) {
