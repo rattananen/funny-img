@@ -47,8 +47,9 @@ file(GLOB img_inc_files
 add_executable (funny_img "src/main_img.cpp" ${img_inc_files})
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
     target_link_options(funny_img PRIVATE -static)
+    Add_dist(funny_img)
 endif()
-Add_dist(funny_img)
+
 
 add_executable (funny_img_test "src/main_img_test.cpp" ${img_inc_files}  )
 Add_copy_asset(funny_img_test)
