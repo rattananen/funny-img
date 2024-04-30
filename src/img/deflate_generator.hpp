@@ -51,7 +51,7 @@ namespace img::deflate
 		}
 
 	private:
-		generator_type decode_lz77(const Lz77code& lz, window_t window) {
+		generator_type decode_lz77(const Lz77code& lz, window_t& window) {
 			int32_t symbol;         /* decoded symbol */
 			uint32_t len;            /* length for copy */
 			uint32_t dist;      /* distance for copy */
