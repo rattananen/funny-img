@@ -39,21 +39,18 @@ namespace img::deflate
 		reserved
 	};
 
-	template<typename T>
+	template <typename T>
 	struct CircularBuffer {
 		using container_type = std::vector<T>;
-		CircularBuffer(size_t n) :m_size{n} {
-			data.resize(m_size);
+
+		CircularBuffer(size_t n) : m_size{ n }, m_mask{ n - 1 }, data(n) {
 		}
 
-		T& operator[](std::ptrdiff_t index) {
-			return data[index % m_size];
-		}
-		
-		size_t size() const {
-			return m_size;
-		}
+		T& operator[](std::ptrdiff_t index) { return data[index & m_mask]; }
+
+		size_t size() const { return m_size; }
 	private:
+		size_t m_mask;
 		size_t m_size;
 		container_type data;
 	};
@@ -72,7 +69,7 @@ namespace img::deflate
 	};
 
 	size_t deflate_window_size(int cifo) {
-		return 256 * std::pow(2, cifo);
+		return 1ull << (8 + cifo);
 	}
 
 	struct Huffman {
