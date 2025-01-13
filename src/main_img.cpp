@@ -24,8 +24,8 @@ int cmd_convert_png(const std::string& in, std::ostream& os, std::ostream& err, 
 	auto row_gen = decoder();
 
 	while (row_gen) {
-		auto row_view_ptr = row_gen();
-		for (auto p : *row_view_ptr) {
+		//auto row_view = row_gen();
+		for (auto p : *row_gen()){
 			os << to_char(p, table);
 		}
 		os << "\n";

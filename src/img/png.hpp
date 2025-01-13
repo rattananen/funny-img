@@ -5,6 +5,7 @@
 #include "pixel.hpp"
 #include <iostream>
 #include <fstream>
+#include <optional>
 
 
 /// https://www.w3.org/TR/png/#13Decompression
@@ -179,9 +180,9 @@ namespace img::png {
 			pointer ptr;
 			view_type& view;
 		};
+	
 		Rgba32_view(container_t& c) :data{c} {}
-
-
+	
 		value_t operator[](size_t i) {
 			auto pos = i * 4;
 			return value_t{data[pos], data[pos + 1] , data[pos + 2] , data[pos + 3]};
@@ -215,13 +216,13 @@ namespace img::png {
 	struct Row_decoder {
 		using row_type = bytes_t;
 		using view_type = V;
-		using view_type_ptr = std::unique_ptr<V>;//Generator is require movetable object
+		
 
 		Row_decoder(std::istream& is, const Png& png) :m_is{ is }, m_png{ png }, row_excl_filt_size{ png.row_size() } {
 		
 		}
 
-		Generator<view_type_ptr> operator()() {
+		Generator<view_type*> operator()() {
 			if (!goto_chunk(m_is, ChunkId::IDAT)) {
 				throw std::system_error(make_error_code(PngError::idat_not_found));
 			}
@@ -258,7 +259,8 @@ namespace img::png {
 				default:
 					throw std::system_error(make_error_code(PngError::invalid_idat));
 				}
-				co_yield std::make_unique<view_type>(cur_row);
+				result.emplace(cur_row);
+				co_yield &(*result);
 				std::swap(cur_row, prev_row);
 			}
 			co_return;
@@ -327,6 +329,7 @@ namespace img::png {
 		row_type cur_row;
 		size_t acc_size = 0;
 		const size_t row_excl_filt_size;
+		std::optional<view_type> result;
 		std::istream& m_is;
 		const Png& m_png;
 	};
