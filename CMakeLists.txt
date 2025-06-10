@@ -1,4 +1,4 @@
-﻿cmake_minimum_required (VERSION 3.20)
+﻿cmake_minimum_required (VERSION 3.28)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_FIND_LIBRARY_SUFFIXES ".a" ".lib" ".so" ".dll")
@@ -11,7 +11,6 @@ function(Add_copy_asset for)
     add_custom_command(
          TARGET ${for} POST_BUILD
          COMMAND ${CMAKE_COMMAND} -E copy_directory ${resource_dir} ${resource_dest_dir} 
-         DEPENDS ${resource_dest_dir}
          COMMENT "copy_directory resources folder from ${resource_dir} => ${resource_dest_dir}"
      )
 endfunction()
@@ -28,7 +27,6 @@ function(Add_dist for)
         TARGET ${for} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy "${tname}" ${dest_path}
         COMMAND ${CMAKE_COMMAND} -E sha1sum "${tname}" > ${checksum}
-        DEPENDS ${dest_path} ${checksum}
      )
 endfunction()
 
